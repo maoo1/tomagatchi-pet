@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "author": "you",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-devkit-v1",
+      "id": "esp32",
+      "top": 0,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-ili9341",
+      "id": "lcd",
+      "top": -200,
+      "left": 200,
+      "attrs": {}
+    }
+  ],
+  "connections": [
+    ["lcd:VCC",  "esp32:3V3", "red",    []],
+    ["lcd:GND",  "esp32:GND", "black",  []],
+    ["lcd:CS",   "esp32:15",  "orange", []],
+    ["lcd:RST",  "esp32:EN",  "white",  []],
+    ["lcd:DC",   "esp32:2",   "green",  []],
+    ["lcd:MOSI", "esp32:23",  "cyan",   []],
+    ["lcd:SCK",  "esp32:18",  "yellow", []],
+    ["lcd:LED",  "esp32:3V3", "red",    []],
+    ["lcd:MISO", "esp32:19",  "blue",   []]
+  ]
+}
