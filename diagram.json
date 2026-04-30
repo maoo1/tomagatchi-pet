@@ -21,9 +21,9 @@
   "connections": [
     ["lcd:VCC",  "esp32:3V3", "red",    []],
     ["lcd:GND",  "esp32:GND", "black",  []],
-    ["lcd:CS",   "esp32:15",  "orange", []],
+    ["lcd:CS",   "esp32:5",   "orange", []],
     ["lcd:RST",  "esp32:EN",  "white",  []],
-    ["lcd:DC",   "esp32:2",   "green",  []],
+    ["lcd:DC",   "esp32:16",  "green",  []],
     ["lcd:MOSI", "esp32:23",  "cyan",   []],
     ["lcd:SCK",  "esp32:18",  "yellow", []],
     ["lcd:LED",  "esp32:3V3", "red",    []],

@@ -3,12 +3,14 @@ import numpy as np
 import sys
 import os
 
-def convert(input_path, var_name=None, transparent_color=(255, 0, 255)):
+def convert(input_path, var_name=None):
     img = Image.open(input_path).convert("RGBA")
     w, h = img.size
 
     if var_name is None:
         var_name = os.path.splitext(os.path.basename(input_path))[0]
+
+    var_name = var_name.replace('-', '_')
 
     pixels = np.array(img)
     out = []
@@ -16,13 +18,13 @@ def convert(input_path, var_name=None, transparent_color=(255, 0, 255)):
     for row in pixels:
         for px in row:
             r, g, b, a = px
-            # treat magenta or fully transparent as TFT_BLACK (0x0000)
-            if a == 0 or (r > 200 and g < 50 and b > 200):
-                out.append(0x0000)
+            brightness = (int(r) + int(g) + int(b)) / 3
+
+            # transparent or magenta or near-white = background (white)
+            if a == 0 or (r > 200 and g < 50 and b > 200) or brightness > 128:
+                out.append(0xFFFF)  # white background
             else:
-                # pack to RGB565
-                rgb = ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3)
-                out.append(rgb)
+                out.append(0x0000)  # black outline
 
     header = f"// Auto-generated from {input_path}\n"
     header += f"// Size: {w}x{h}\n"
