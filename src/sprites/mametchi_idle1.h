@@ -1,4 +1,3 @@
-// Auto-generated from assets/mametchi-idle1.png
 // Size: 48x55
 #pragma once
 #include <pgmspace.h>
