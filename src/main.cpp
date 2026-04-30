@@ -25,7 +25,7 @@ void drawFrame(int frameIdx) {
   int y = (SCREEN_H - spriteH) / 2;
 
   tft.fillScreen(TFT_WHITE);
-  tft.pushImage(x, y, spriteW, spriteH, frames[frameIdx]);
+  tft.pushImage(x, y, spriteW, spriteH, frames[frameIdx], 0x0000);
 }
 
 void setup() {
