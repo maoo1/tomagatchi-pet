@@ -7,6 +7,8 @@
 #include "sprites/mametchi_eating1.h"
 #include "sprites/mametchi_eating2.h"
 #include "sprites/mametchi_happy.h"
+#include "sprites/mametchi_sad.h"
+#include "sprites/mametchi_angry.h" 
 
 TFT_eSPI tft = TFT_eSPI();
 
@@ -20,7 +22,8 @@ int spriteH = MAMETCHI_IDLE1_H;
 
 // STATS
 #define MAX_STAT        10
-#define STAT_DECAY_MS   60000UL   // 1 min
+// #define STAT_DECAY_MS   60000UL   // 1 min
+#define STAT_DECAY_MS   10000UL   // 10 sec for testing; change this back later
 
 int hunger    = MAX_STAT;
 int happiness = MAX_STAT;
@@ -28,7 +31,7 @@ int happiness = MAX_STAT;
 unsigned long lastDecayTime = 0;
  
 // PET STATES
-enum PetState { STATE_IDLE, STATE_EATING, STATE_HAPPY };
+enum PetState { STATE_IDLE, STATE_EATING, STATE_HAPPY, STATE_SAD, STATE_ANGRY };
 PetState petState = STATE_IDLE;
  
 unsigned long stateStartTime  = 0;
@@ -43,6 +46,19 @@ uint16_t frameBuf[MAMETCHI_IDLE1_W * MAMETCHI_IDLE1_H];
 const uint16_t* idleFrames[]   = { mametchi_idle1,   mametchi_idle2   };
 const uint16_t* eatingFrames[] = { mametchi_eating1, mametchi_eating2 };
 const uint16_t* happyFrames[]  = { mametchi_happy,   mametchi_happy   };
+const uint16_t* sadFrames[]    = { mametchi_sad,   mametchi_sad   }; 
+const uint16_t* angryFrames[]  = { mametchi_angry,   mametchi_angry   }; 
+
+// CHAT
+bool chatOpen = false;
+int  chatSelected = 0;
+
+const char* chatMessages[] = {
+  "Hello!",
+  "Let's play!",
+  "Bye bye!"
+};
+#define CHAT_MSG_COUNT 3
 
 //UI LAYOUT
 #define BAR_X       10
@@ -118,7 +134,7 @@ void setState(PetState s) {
 }
 
 void updateState() {
-  if (petState != STATE_IDLE) {
+  if (petState == STATE_EATING || petState == STATE_HAPPY) {
     if (millis() - stateStartTime >= STATE_DURATION_MS) {
       setState(STATE_IDLE);
       tft.fillScreen(TFT_WHITE);
@@ -141,8 +157,54 @@ void drawFrame(int frameIdx)
   tft.pushImage(x, y, spriteW, spriteH, frameBuf);
 }
 
+void drawChat() {
+  tft.fillScreen(TFT_WHITE);
+  tft.setTextColor(TFT_BLACK, TFT_WHITE);
+  tft.setTextSize(1);
+  tft.setCursor(10, 10);
+  tft.print("-- CHAT --");
+
+  for (int i = 0; i < CHAT_MSG_COUNT; i++) {
+    if (i == chatSelected) {
+      tft.fillRect(5, 28 + i * 18, 125, 16, TFT_LIGHTGREY);
+      tft.setTextColor(TFT_BLACK, TFT_LIGHTGREY);
+    } else {
+      tft.setTextColor(TFT_DARKGREY, TFT_WHITE);
+    }
+    tft.setCursor(10, 30 + i * 18);
+    tft.print(chatMessages[i]);
+  }
+
+  tft.setTextColor(TFT_DARKGREY, TFT_WHITE);
+  tft.setCursor(5, SCREEN_H - 30);
+  tft.print("[SCROLL]  [SEND/EXIT]");
+}
+
+void openChat() {
+  chatOpen    = true;
+  chatSelected = 0;
+  drawChat();
+}
+
+void closeChat() {
+  chatOpen = false;
+  tft.fillScreen(TFT_WHITE);
+  drawBars();
+  drawButtons();
+  drawSprite(idleFrames[0]);
+}
+
+void sendChatMessage(int idx) {
+  Serial.printf("SEND: %s\n", chatMessages[idx]);
+  // ESP-NOW send goes here later
+}
+
 void setup() {
   Serial.begin(115200);
+
+  // turn backlight on -- without this screen stays black
+  pinMode(TFT_BL, OUTPUT);
+  digitalWrite(TFT_BL, TFT_BACKLIGHT_ON);
  
   pinMode(BTN_FEED, INPUT_PULLUP);
   pinMode(BTN_PLAY, INPUT_PULLUP);
@@ -161,6 +223,7 @@ void setup() {
  
   Serial.println("Tamagotchi ready!");
 }
+
 void loop() {
   unsigned long now = millis();
  
@@ -173,24 +236,45 @@ void loop() {
     Serial.printf("Decay → hunger: %d, happiness: %d\n", hunger, happiness);
   }
  
-  // Button: Feed
-  if (digitalRead(BTN_FEED) == LOW) {
-    hunger = min(hunger + 3, MAX_STAT);
-    drawBars();
-    setState(STATE_EATING);
-    tft.fillRect(SPRITE_X, SPRITE_Y, spriteW, spriteH, TFT_WHITE);
-    Serial.printf("Fed → hunger: %d\n", hunger);
-    delay(200);
+  bool feedPressed = digitalRead(BTN_FEED) == LOW;
+  bool playPressed = digitalRead(BTN_PLAY) == LOW;
+
+  if (feedPressed && playPressed) {
+    if (!chatOpen) openChat();
+    delay(300);
   }
- 
-  // Button: Play
-  if (digitalRead(BTN_PLAY) == LOW) {
-    happiness = min(happiness + 3, MAX_STAT);
-    drawBars();
-    setState(STATE_HAPPY);
-    tft.fillRect(SPRITE_X, SPRITE_Y, spriteW, spriteH, TFT_WHITE);
-    Serial.printf("Played → happiness: %d\n", happiness);
-    delay(200);
+  else if (chatOpen) {
+    if (feedPressed) {
+      // scroll down
+      chatSelected = (chatSelected + 1) % CHAT_MSG_COUNT;
+      drawChat();
+      delay(200);
+    }
+    if (playPressed) {
+      // send selected message then exit
+      sendChatMessage(chatSelected);
+      closeChat();
+      delay(200);
+    }
+  }
+  else {
+    // normal button handling
+    if (feedPressed) {
+      hunger = min(hunger + 3, MAX_STAT);
+      drawBars();
+      setState(STATE_EATING);
+      tft.fillRect(SPRITE_X, SPRITE_Y, spriteW, spriteH, TFT_WHITE);
+      Serial.printf("Fed → hunger: %d\n", hunger);
+      delay(200);
+    }
+    if (playPressed) {
+      happiness = min(happiness + 3, MAX_STAT);
+      drawBars();
+      setState(STATE_HAPPY);
+      tft.fillRect(SPRITE_X, SPRITE_Y, spriteW, spriteH, TFT_WHITE);
+      Serial.printf("Played → happiness: %d\n", happiness);
+      delay(200);
+    }
   }
  
   updateState();
@@ -201,6 +285,12 @@ void loop() {
  
     const uint16_t** activeFrames;
     int frameCount;
+
+    if (petState == STATE_IDLE || petState == STATE_SAD || petState == STATE_ANGRY) {
+      if (hunger <= 3)          petState = STATE_ANGRY;
+      else if (happiness <= 5)  petState = STATE_SAD;
+      else                      petState = STATE_IDLE;
+    }
  
     switch (petState) {
       case STATE_EATING:
@@ -210,6 +300,14 @@ void loop() {
       case STATE_HAPPY:
         activeFrames = happyFrames;
         frameCount   = 1;
+        break;
+      case STATE_SAD:
+        activeFrames = sadFrames;
+        frameCount = 1; 
+        break;
+      case STATE_ANGRY:
+        activeFrames = angryFrames;
+        frameCount = 1;
         break;
       default:
         activeFrames = idleFrames;
@@ -221,3 +319,4 @@ void loop() {
     drawSprite(activeFrames[currentFrame]);
   }
 }
+
