@@ -2,7 +2,7 @@
 Linda Tang, Madeline Ou, Tramy Dong
 ---------------
 
-## FINAL PROJECT
+FINAL PROJECT
 
 Inspired by the popular Japanese keychain-sized virtual pet simulation game Tamagotchi, our project is a recreation of this game using the 
 available materials. The game includes a sprite-based character with interactive elements. In the original device, users need to feed, 
@@ -10,21 +10,19 @@ clean, medicate, and play with their Tamagotchi pet to ensure it survives. Our p
 feeding and playing with the pet. The pet will grow when fed and played with, and its mood will worsen when ignored. In our design, 
 there will also be a communication feature where two Tamagotchis can send messages to each other. 
 
-#### Hardware Specs
+Hardware Specs
 
-**ESP32 TTGO T1 Display**
+ESP32 TTGO T1 Display
 
 - The buttons on the ESP32 will be used to interact with the Tamagotchi pet.
 - The battery pack will be used to power the display, users will need to take apart the case to recharge the device.
 
-**3D modeling and printing enclosure/shell**
-
-![Screenshot 2026-05-15 at 4.15.58 PM.png](attachment:ead39627-7208-4b35-843b-bb24e5c7efa8:Screenshot_2026-05-15_at_4.15.58_PM.png)
+3D modeling and printing enclosure/shell
 
 - To create a custom enclosure for the ESP32, we used Autodesk Fusion and open source ESP32 STL files to design a case.
 - The case was 3D printed and assembled at the Barnard Design Center
 
-### Creative Decisions
+Creative Decisions
 
 Using what we learned this semester, we wanted to create a final project that would encapsulate all the material. On the 
 software side, we wanted to experiment more with Bluetooth and communication features. We also wanted to design and print 
@@ -32,7 +30,7 @@ hardware pieces from scratch. One of the significant creative decisions was crea
 in the first version of the original game. This gave our project a nostalgic feeling that reminded people of the original game.
 
 
-### Technical Challenges
+Technical Challenges
 
 The main challenge we ran into was trying to successfully flash the code onto all the ESP32s. Not all of them were functioning 
 and made the process of testing the code difficult. To work around it, we used online simulator tools to check the outputs of 
