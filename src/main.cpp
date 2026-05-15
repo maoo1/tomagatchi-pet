@@ -1,5 +1,7 @@
 #include <Arduino.h>
 #include <TFT_eSPI.h>
+#include <WiFi.h>
+#include <esp_now.h>
 
 // animation frames
 #include "sprites/mametchi_idle1.h"
@@ -19,6 +21,18 @@ TFT_eSPI tft = TFT_eSPI();
 // sprite dimensions -- all of them should be the same
 int spriteW = MAMETCHI_IDLE1_W;
 int spriteH = MAMETCHI_IDLE1_H;
+
+// ESP-NOW Communication
+// Replace with the MAC address of the OTHER esp
+uint8_t peerMAC[] = { 0xA0, 0xDD, 0x6C, 0x73, 0xA4, 0x50 };
+
+// incoming message storage
+char incomingMsg[32] = "";
+bool msgReceived = false;
+
+// message display timer
+unsigned long msgDisplayStart = 0;
+#define MSG_DISPLAY_MS 4000
 
 // STATS
 #define MAX_STAT        10
@@ -195,8 +209,64 @@ void closeChat() {
 }
 
 void sendChatMessage(int idx) {
-  Serial.printf("SEND: %s\n", chatMessages[idx]);
-  // ESP-NOW send goes here later
+  const char* msg = chatMessages[idx];
+  esp_now_send(peerMAC, (uint8_t*)msg, strlen(msg) + 1);
+  Serial.printf("Sent: %s\n", msg);
+}
+
+// called when a message is sent -- for debugging
+void onSent(const uint8_t* mac, esp_now_send_status_t status) {
+  Serial.printf("Send %s\n", status == ESP_NOW_SEND_SUCCESS ? "OK" : "FAIL");
+}
+
+// called when a message is received
+void onReceive(const esp_now_recv_info_t* info, const uint8_t* data, int len) {
+  memcpy(incomingMsg, data, min(len, 31));
+  incomingMsg[min(len, 31)] = '\0';
+  msgReceived = true;
+  Serial.printf("Received: %s\n", incomingMsg);
+}
+
+void drawIncomingMessage() {
+  tft.fillScreen(TFT_WHITE);
+  drawBars();
+  drawButtons();
+  drawSprite(idleFrames[0]);
+
+  // message bubble at bottom
+  tft.fillRoundRect(5, SCREEN_H - 80, 125, 50, 6, TFT_LIGHTGREY);
+  tft.drawRoundRect(5, SCREEN_H - 80, 125, 50, 6, TFT_DARKGREY);
+  tft.setTextColor(TFT_BLACK, TFT_LIGHTGREY);
+  tft.setTextSize(1);
+  tft.setCursor(10, SCREEN_H - 68);
+  tft.print("Friend says:");
+  tft.setCursor(10, SCREEN_H - 55);
+  tft.print(incomingMsg);
+}
+
+void initESPNow() {
+  WiFi.mode(WIFI_STA);
+  WiFi.disconnect();
+
+  if (esp_now_init() != ESP_OK) {
+    Serial.println("ESP-NOW init failed");
+    return;
+  }
+
+  esp_now_register_send_cb(onSent);
+  esp_now_register_recv_cb(onReceive);
+
+  // register the peer
+  esp_now_peer_info_t peer = {};
+  memcpy(peer.peer_addr, peerMAC, 6);
+  peer.channel = 0;
+  peer.encrypt = false;
+
+  if (esp_now_add_peer(&peer) != ESP_OK) {
+    Serial.println("Failed to add peer");
+  } else {
+    Serial.println("Peer added OK");
+  }
 }
 
 void setup() {
@@ -222,10 +292,27 @@ void setup() {
   lastDecayTime = millis();
  
   Serial.println("Tamagotchi ready!");
+  initESPNow();
 }
 
 void loop() {
   unsigned long now = millis();
+
+  // esp now
+  // show incoming message if received
+  if (msgReceived) {
+    msgReceived = false;
+    msgDisplayStart = now;
+    drawIncomingMessage();
+  }
+
+  // clear message after display time
+  if (msgDisplayStart > 0 && now - msgDisplayStart >= MSG_DISPLAY_MS) {
+    msgDisplayStart = 0;
+    tft.fillScreen(TFT_WHITE);
+    drawBars();
+    drawButtons();
+  }
  
   // Stat decay every 1 minute
   if (now - lastDecayTime >= STAT_DECAY_MS) {
