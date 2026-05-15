@@ -220,7 +220,7 @@ void onSent(const uint8_t* mac, esp_now_send_status_t status) {
 }
 
 // called when a message is received
-void onReceive(const esp_now_recv_info_t* info, const uint8_t* data, int len) {
+void onReceive(const uint8_t* mac, const uint8_t* data, int len) {
   memcpy(incomingMsg, data, min(len, 31));
   incomingMsg[min(len, 31)] = '\0';
   msgReceived = true;
