@@ -149,6 +149,7 @@ void setState(PetState s) {
 }
 
 void updateState() {
+  if (chatOpen) return;
   if (petState == STATE_EATING || petState == STATE_HAPPY) {
     if (millis() - stateStartTime >= STATE_DURATION_MS) {
       setState(STATE_IDLE);
@@ -368,7 +369,7 @@ void loop() {
   updateState();
  
   // Animation tick
-  if (now - lastFrameTime >= FRAME_DELAY) {
+  if (now - lastFrameTime >= FRAME_DELAY && !chatOpen) {
     lastFrameTime = now;
  
     const uint16_t** activeFrames;
